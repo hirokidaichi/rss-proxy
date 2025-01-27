@@ -33,7 +33,18 @@ API には以下の 2 つのエンドポイントを実装する:
   - [ ] 圧縮対応の検討
   - [ ] キャッシュヘッダーの最適化
 
-### 3. ドキュメントの更新
+### 3. コードの修正
+
+#### テストコードの依存関係とメソッド名の修正
+
+- [x] テストファイルのDenoの標準ライブラリバージョンを明示的に指定
+  - [x] transformer_test.ts: `https://deno.land/std/testing/asserts.ts` → `https://deno.land/std@0.224.0/testing/asserts.ts`
+  - [x] parser_test.ts: `https://deno.land/std/testing/asserts.ts` → `https://deno.land/std@0.224.0/testing/asserts.ts`
+  - [x] repository_test.ts: `https://deno.land/std/testing/asserts.ts` → `https://deno.land/std@0.224.0/testing/asserts.ts`
+- [x] repository_test.tsのメソッド名を修正
+  - [x] `cleanupExpiredCache()` → `cleanup()`
+
+### 4. ドキュメントの更新
 
 - [ ] ドメイン層の設計説明
   - [ ] 各モジュールの役割

@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
-import { handleContent } from "@routes/content.ts";
+import { handleContent } from "../routes/content.ts";
 
 const TEST_CONTENT_URL = "https://example.com/article1";
 const MOCK_HTML_CONTENT = `
@@ -17,10 +17,13 @@ const MOCK_HTML_CONTENT = `
 // テスト用のKVデータをセットアップ
 async function setupTestData() {
   const kv = await Deno.openKv();
-  await kv.set(["valid_urls", "test-feed"], [
-    "https://example.com/article1",
-    "https://example.com/article2"
-  ]);
+  await kv.set(["valid_urls", "test-feed"], {
+    urls: [
+      "https://example.com/article1",
+      "https://example.com/article2"
+    ],
+    timestamp: Date.now()
+  });
   await kv.close();
 }
 
@@ -29,17 +32,20 @@ Deno.test("Content Handler - Setup", async () => {
 });
 
 Deno.test("Content Handler - Missing URL", async () => {
-  const response = await handleContent("");
+  const request = new Request("http://localhost:8000/content");
+  const response = await handleContent("", request);
   assertEquals(response.status, 400);
 });
 
 Deno.test("Content Handler - Invalid URL", async () => {
-  const response = await handleContent("not-a-url");
+  const request = new Request("http://localhost:8000/content");
+  const response = await handleContent("not-a-url", request);
   assertEquals(response.status, 400);
 });
 
 Deno.test("Content Handler - URL Not in Allowed List", async () => {
-  const response = await handleContent("https://example.com/not-allowed");
+  const request = new Request("http://localhost:8000/content");
+  const response = await handleContent("https://example.com/not-allowed", request);
   assertEquals(response.status, 403);
 });
 
@@ -49,16 +55,17 @@ Deno.test("Content Handler - Successful Response", async () => {
   globalThis.fetch = async () => {
     return new Response(MOCK_HTML_CONTENT, {
       status: 200,
-      headers: { "Content-Type": "text/html" },
+      headers: { "Content-Type": "text/html; charset=UTF-8" },
     });
   };
 
   try {
-    const response = await handleContent(TEST_CONTENT_URL);
+    const request = new Request("http://localhost:8000/content");
+    const response = await handleContent(TEST_CONTENT_URL, request);
     assertEquals(response.status, 200);
     
     const contentType = response.headers.get("Content-Type");
-    assertEquals(contentType, "text/html");
+    assertEquals(contentType, "text/html; charset=UTF-8");
 
     const content = await response.text();
     assertEquals(content.includes("Test Content"), true);
@@ -76,7 +83,8 @@ Deno.test("Content Handler - Fetch Error", async () => {
   };
 
   try {
-    const response = await handleContent(TEST_CONTENT_URL);
+    const request = new Request("http://localhost:8000/content");
+    const response = await handleContent(TEST_CONTENT_URL, request);
     assertEquals(response.status, 502);
   } finally {
     globalThis.fetch = originalFetch;

@@ -1,4 +1,4 @@
-import { assertEquals, assertStringIncludes } from "https://deno.land/std/testing/asserts.ts";
+import { assertEquals, assertStringIncludes } from "https://deno.land/std@0.224.0/testing/asserts.ts";
 import { RSSTransformer } from "../transformer.ts";
 import { RSSDocument } from "../types.ts";
 

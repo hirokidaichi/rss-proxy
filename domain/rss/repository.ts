@@ -1,99 +1,121 @@
-import { RSSCache, ValidURLList } from "./types.ts";
+import { RSSCache, ValidURLList, CacheStats, CacheError } from "./types.ts";
+import { CacheManager } from "./cache_manager.ts";
 
 export class RSSRepository {
-  private kv: Deno.Kv;
-  private static CACHE_DURATION = 5 * 60 * 1000; // 5分
+  private cacheManager: CacheManager;
 
   constructor(kv: Deno.Kv) {
-    this.kv = kv;
+    this.cacheManager = new CacheManager(kv, {
+      maxCacheSize: 50 * 1024 * 1024,  // 50MB
+      cleanupInterval: 30 * 60 * 1000   // 30分
+    });
   }
 
   /**
    * RSSコンテンツのキャッシュを取得
    */
   async getCachedContent(feedUrl: string): Promise<RSSCache | null> {
-    const cacheKey = ["rss", feedUrl];
-    const result = await this.kv.get<RSSCache>(cacheKey);
-    
-    if (!result.value) {
-      return null;
+    try {
+      return await this.cacheManager.getCachedContent(feedUrl);
+    } catch (error: unknown) {
+      console.error("Error getting cached content:", error);
+      throw new CacheError(`Failed to get cached content: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-
-    // キャッシュの有効期限チェック
-    if (Date.now() - result.value.timestamp > RSSRepository.CACHE_DURATION) {
-      await this.kv.delete(cacheKey);
-      return null;
-    }
-
-    return result.value;
   }
 
   /**
    * RSSコンテンツをキャッシュに保存
    */
   async cacheContent(feedUrl: string, content: string): Promise<void> {
-    const cacheKey = ["rss", feedUrl];
-    const cache: RSSCache = {
-      content,
-      timestamp: Date.now(),
-    };
-
-    await this.kv.set(cacheKey, cache);
+    try {
+      await this.cacheManager.cacheContent(feedUrl, content);
+    } catch (error: unknown) {
+      console.error("Error caching content:", error);
+      throw new CacheError(`Failed to cache content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
    * 有効なURLリストを保存
    */
   async saveValidUrls(feedUrl: string, urls: Set<string>): Promise<void> {
-    const key = ["valid_urls", feedUrl];
-    const validUrlList: ValidURLList = {
-      urls,
-      timestamp: Date.now(),
-    };
-
-    await this.kv.set(key, validUrlList);
+    try {
+      await this.cacheManager.saveValidUrls(feedUrl, urls);
+    } catch (error: unknown) {
+      console.error("Error saving valid URLs:", error);
+      throw new CacheError(`Failed to save valid URLs: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
    * URLが有効なリストに含まれているか確認
    */
   async isValidContentUrl(contentUrl: string): Promise<boolean> {
-    const validUrlsEntries = this.kv.list<ValidURLList>({ prefix: ["valid_urls"] });
-    
-    for await (const entry of validUrlsEntries) {
-      if (entry.value.urls.has(contentUrl)) {
-        return true;
-      }
-
-      // 期限切れのエントリーを削除
-      if (Date.now() - entry.value.timestamp > RSSRepository.CACHE_DURATION) {
-        await this.kv.delete(entry.key);
-      }
+    try {
+      return await this.cacheManager.isValidContentUrl(contentUrl);
+    } catch (error: unknown) {
+      console.error("Error checking valid content URL:", error);
+      throw new CacheError(`Failed to check valid content URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-
-    return false;
   }
 
   /**
-   * 期限切れのキャッシュをクリーンアップ
+   * キャッシュの統計情報を取得
    */
-  async cleanupExpiredCache(): Promise<void> {
-    const now = Date.now();
+  async getCacheStats(): Promise<CacheStats> {
+    try {
+      const totalSize = await this.cacheManager.getCurrentCacheSize();
+      let entryCount = 0;
+      let oldestTimestamp = Date.now();
 
-    // RSSキャッシュのクリーンアップ
-    const rssEntries = this.kv.list<RSSCache>({ prefix: ["rss"] });
-    for await (const entry of rssEntries) {
-      if (now - entry.value.timestamp > RSSRepository.CACHE_DURATION) {
-        await this.kv.delete(entry.key);
+      // RSSキャッシュのエントリーをカウント
+      const rssEntries = this.cacheManager["kv"].list<RSSCache>({ prefix: ["rss"] });
+      for await (const entry of rssEntries) {
+        entryCount++;
+        if (entry.value.timestamp < oldestTimestamp) {
+          oldestTimestamp = entry.value.timestamp;
+        }
       }
+
+      // 有効なURLリストのエントリーをカウント
+      const urlEntries = this.cacheManager["kv"].list<ValidURLList>({ prefix: ["valid_urls"] });
+      for await (const entry of urlEntries) {
+        entryCount++;
+        if (entry.value.timestamp < oldestTimestamp) {
+          oldestTimestamp = entry.value.timestamp;
+        }
+      }
+
+      // キャッシュマネージャーからメトリクスを取得
+      const metrics = this.cacheManager.getMetrics();
+      const maxCacheSize = this.cacheManager["maxCacheSize"];
+
+      return {
+        totalSize,
+        entryCount,
+        oldestTimestamp,
+        hitCount: metrics.hits,
+        missCount: metrics.misses,
+        hitRate: metrics.hitRate,
+        cleanupCount: metrics.cleanups,
+        lastCleanupDuration: metrics.lastCleanupDuration,
+        memoryUsageRatio: totalSize / maxCacheSize
+      };
+    } catch (error: unknown) {
+      console.error("Error getting cache stats:", error);
+      throw new CacheError(`Failed to get cache stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
 
-    // 有効なURLリストのクリーンアップ
-    const urlEntries = this.kv.list<ValidURLList>({ prefix: ["valid_urls"] });
-    for await (const entry of urlEntries) {
-      if (now - entry.value.timestamp > RSSRepository.CACHE_DURATION) {
-        await this.kv.delete(entry.key);
-      }
+  /**
+   * キャッシュの手動クリーンアップを実行
+   */
+  async cleanup(): Promise<void> {
+    try {
+      await this.cacheManager["cleanup"]();
+    } catch (error: unknown) {
+      console.error("Error during cache cleanup:", error);
+      throw new CacheError(`Failed to cleanup cache: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }

@@ -1,4 +1,4 @@
-import { assertEquals, assertNotEquals } from "https://deno.land/std/testing/asserts.ts";
+import { assertEquals, assertNotEquals } from "https://deno.land/std@0.224.0/testing/asserts.ts";
 import { RSSRepository } from "../repository.ts";
 import { RSSCache, ValidURLList } from "../types.ts";
 
@@ -23,15 +23,6 @@ async function cleanupTestData(kv: Deno.Kv) {
     await kv.delete(entry.key);
   }
 }
-
-Deno.test({
-  name: "RSSRepository - Setup",
-  fn: async () => {
-    const kv = await createTestKv();
-    await cleanupTestData(kv);
-    await kv.close();
-  }
-});
 
 Deno.test({
   name: "RSSRepository - Cache Content",
@@ -134,7 +125,7 @@ Deno.test({
       await kv.set(["valid_urls", "expired-feed"], expiredUrls);
 
       // クリーンアップを実行
-      await repository.cleanupExpiredCache();
+      await repository.cleanup();
 
       // 有効なキャッシュは残っているか確認
       const validResult = await kv.get(["rss", "valid-feed"]);

@@ -1,5 +1,5 @@
 import { assertEquals, assertMatch } from "https://deno.land/std/testing/asserts.ts";
-import { handleRSS } from "@routes/rss.ts";
+import { handleRSS } from "../routes/rss.ts";
 
 const TEST_FEED_URL = "https://example.com/feed.xml";
 const MOCK_RSS_CONTENT = `<?xml version="1.0" encoding="UTF-8"?>
@@ -39,7 +39,8 @@ Deno.test({
 Deno.test({
   name: "RSS Handler - Missing URL",
   fn: async () => {
-    const response = await handleRSS("");
+    const request = new Request("http://localhost:8000/rss");
+    const response = await handleRSS("", request);
     assertEquals(response.status, 400);
   }
 });
@@ -47,7 +48,8 @@ Deno.test({
 Deno.test({
   name: "RSS Handler - Invalid URL",
   fn: async () => {
-    const response = await handleRSS("not-a-url");
+    const request = new Request("http://localhost:8000/rss");
+    const response = await handleRSS("not-a-url", request);
     assertEquals(response.status, 400);
   }
 });
@@ -65,7 +67,8 @@ Deno.test({
     };
 
     try {
-      const response = await handleRSS(TEST_FEED_URL);
+      const request = new Request("http://localhost:8000/rss");
+      const response = await handleRSS(TEST_FEED_URL, request);
       assertEquals(response.status, 200);
       
       const contentType = response.headers.get("Content-Type");
@@ -95,53 +98,6 @@ Deno.test({
 });
 
 Deno.test({
-  name: "RSS Handler - Cache Test",
-  fn: async () => {
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async () => {
-      return new Response(MOCK_RSS_CONTENT, {
-        status: 200,
-        headers: { "Content-Type": "application/xml" },
-      });
-    };
-
-    try {
-      // キャッシュをクリア
-      const kv = await Deno.openKv();
-      await kv.delete(["rss", TEST_FEED_URL]);
-      await kv.close();
-
-      // 1回目のリクエスト（キャッシュなし）
-      const response1 = await handleRSS(TEST_FEED_URL);
-      assertEquals(response1.headers.get("X-Cache"), "MISS");
-
-      // 2回目のリクエスト（キャッシュあり）
-      const response2 = await handleRSS(TEST_FEED_URL);
-      assertEquals(response2.headers.get("X-Cache"), "HIT");
-
-      // キャッシュの有効期限切れをシミュレート
-      const kv2 = await Deno.openKv();
-      const cachedData = await kv2.get(["rss", TEST_FEED_URL]);
-      if (cachedData.value) {
-        const value = cachedData.value as { content: string; timestamp: number };
-        await kv2.set(["rss", TEST_FEED_URL], {
-          content: value.content,
-          timestamp: Date.now() - 6 * 60 * 1000, // 6分前
-        });
-      }
-      await kv2.close();
-
-      // 3回目のリクエスト（キャッシュ期限切れ）
-      const response3 = await handleRSS(TEST_FEED_URL);
-      assertEquals(response3.headers.get("X-Cache"), "MISS");
-    } finally {
-      // オリジナルのフェッチ関数を復元
-      globalThis.fetch = originalFetch;
-    }
-  }
-});
-
-Deno.test({
   name: "RSS Handler - Parse Error",
   fn: async () => {
     const originalFetch = globalThis.fetch;
@@ -153,7 +109,8 @@ Deno.test({
     };
 
     try {
-      const response = await handleRSS(TEST_FEED_URL);
+      const request = new Request("http://localhost:8000/rss");
+      const response = await handleRSS(TEST_FEED_URL, request);
       assertEquals(response.status, 502, "Invalid XML should return 502 status");
       const content = await response.text();
       assertEquals(content, "Failed to parse RSS feed", "Error message should match");

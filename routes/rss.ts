@@ -1,38 +1,41 @@
-import { Context } from "hono";
 import { RSSParser } from "../domain/rss/parser.ts";
 import { RSSTransformer } from "../domain/rss/transformer.ts";
 import { RSSRepository } from "../domain/rss/repository.ts";
+import { ResponseHelper } from "../domain/rss/response_helper.ts";
 import { ParseError, ValidationError } from "../domain/rss/types.ts";
 
 const kv = await Deno.openKv();
 const repository = new RSSRepository(kv);
 const transformer = new RSSTransformer("http://localhost:8000");
 
-export async function handleRSS(feedURL: string): Promise<Response> {
+export async function handleRSS(feedURL: string, request: Request): Promise<Response> {
   // バリデーション
   try {
     new URL(feedURL);
   } catch {
-    return new Response("Invalid feedURL", { status: 400 });
+    return ResponseHelper.createErrorResponse("Invalid feedURL", 400);
   }
 
   try {
     // キャッシュチェック
     const cached = await repository.getCachedContent(feedURL);
     if (cached) {
-      return new Response(cached.content, {
-        headers: {
-          "Content-Type": "application/xml",
-          "X-Cache": "HIT",
-          "X-Cache-Timestamp": cached.timestamp.toString()
-        }
+      // If-Modified-Sinceヘッダーのチェック
+      if (ResponseHelper.isNotModifiedSince(request, cached.timestamp)) {
+        return new Response(null, { status: 304 });
+      }
+
+      return ResponseHelper.createXMLResponse(cached.content, {
+        cacheHit: true,
+        timestamp: cached.timestamp,
+        compress: ResponseHelper.supportsCompression(request)
       });
     }
 
     // RSSフィードの取得
     const response = await fetch(feedURL);
     if (!response.ok) {
-      return new Response("Failed to fetch RSS feed", { status: 502 });
+      return ResponseHelper.createErrorResponse("Failed to fetch RSS feed", 502);
     }
 
     const content = await response.text();
@@ -48,24 +51,24 @@ export async function handleRSS(feedURL: string): Promise<Response> {
     // キャッシュに保存
     await repository.cacheContent(feedURL, transformedContent);
 
-    return new Response(transformedContent, {
-      headers: {
-        "Content-Type": "application/xml",
-        "X-Cache": "MISS",
-        "X-Cache-Timestamp": Date.now().toString()
-      }
+    const timestamp = Date.now();
+    return ResponseHelper.createXMLResponse(transformedContent, {
+      cacheHit: false,
+      timestamp,
+      compress: ResponseHelper.supportsCompression(request)
     });
+
   } catch (error) {
     console.error("Error processing RSS:", error);
 
     if (error instanceof ValidationError) {
-      return new Response(error.message, { status: 400 });
+      return ResponseHelper.createErrorResponse(error.message, 400);
     }
 
     if (error instanceof ParseError) {
-      return new Response(error.message, { status: 502 });
+      return ResponseHelper.createErrorResponse(error.message, 502);
     }
 
-    return new Response("Internal server error", { status: 500 });
+    return ResponseHelper.createErrorResponse("Internal server error", 500);
   }
 }
