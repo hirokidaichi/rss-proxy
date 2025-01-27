@@ -15,11 +15,13 @@ const VALID_RSS = `<?xml version="1.0" encoding="UTF-8"?>
       <title>Test Item 1</title>
       <link>https://example.com/article1</link>
       <description>Test Item Description 1</description>
+      <pubDate>Mon, 01 Jan 2024 00:00:00 GMT</pubDate>
     </item>
     <item>
       <title>Test Item 2</title>
       <link>https://example.com/article2</link>
       <description>Test Item Description 2</description>
+      <pubDate>Tue, 02 Jan 2024 00:00:00 GMT</pubDate>
     </item>
   </channel>
 </rss>`;
@@ -126,5 +128,14 @@ Deno.test("RSSParser - RSS With Special Characters", async () => {
   if (Array.isArray(doc.rss?.channel?.item)) {
     assertEquals(doc.rss?.channel?.item[0].title, 'Test "Item" 1');
     assertEquals(doc.rss?.channel?.item[0].description, "Test 'Description' 1");
+  }
+});
+
+Deno.test("RSSParser - Preserve pubDate", async () => {
+  const doc = await RSSParser.parse(VALID_RSS);
+  const items = doc.rss?.channel?.item;
+  if (Array.isArray(items)) {
+    assertEquals(items[0].pubDate, "Mon, 01 Jan 2024 00:00:00 GMT");
+    assertEquals(items[1].pubDate, "Tue, 02 Jan 2024 00:00:00 GMT");
   }
 });

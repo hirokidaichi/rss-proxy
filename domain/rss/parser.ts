@@ -97,12 +97,14 @@ export class RSSParser {
         title: String(item.title ?? ""),
         link: String(item.link ?? ""),
         description: String(item.description ?? ""),
+        pubDate: String(item.pubDate ?? ""),
       }));
     } else if (channel.item) {
       channel.item = {
         title: String(channel.item.title ?? ""),
         link: String(channel.item.link ?? ""),
         description: String(channel.item.description ?? ""),
+        pubDate: String(channel.item.pubDate ?? ""),
       };
     }
 
