@@ -1,201 +1,157 @@
 # コーディングルール
 
-## 1. 基本原則
+## 1. 開発フロー
 
-### Type First アプローチ
-- 実装前に必ず型定義を行う
-- 型の整合性を最優先で確認
-- 型安全性を保証するための厳格な型チェック
-```typescript
-// 良い例：実装前の型定義
-interface FeedResponse {
-  content: string;
-  timestamp: number;
-}
+### 1.1 コード変更の基本フロー
+1. 型定義の作成/更新
+2. テストケースの作成
+3. 実装
+4. レビュー前チェックリスト実行
 
-// 悪い例：型定義なしの実装
-const response = await fetch(url);
-const data = await response.json();
+### 1.2 レビュー前チェックリスト
+```bash
+# 1. 型チェック
+deno check **/*.ts
+
+# 2. リントチェック
+deno lint
+
+# 3. フォーマットチェック
+deno fmt --check
+
+# 4. テスト実行
+deno test
 ```
 
-### テスト駆動開発（TDD）
-1. テスト作成：機能実装前にテストを書く
-2. 失敗確認：テストが失敗することを確認
-3. 実装：テストが通るように実装
-4. リファクタリング：コードの改善
-```typescript
-// モジュールの疎結合を意識したテスト
-interface FeedFetcher {
-  fetch(url: string): Promise<string>;
-}
+### 1.3 コミット前の確認事項
+- [ ] 型エラーがないことを確認
+- [ ] リントエラーがないことを確認
+- [ ] すべてのテストが通過
+- [ ] 新規機能の場合、テストカバレッジが十分か確認
 
-// テスト
-Deno.test("RSSフィードの取得", async () => {
-  const mockFetcher: FeedFetcher = {
-    fetch: (url: string) => Promise.resolve("<?xml...")
-  };
-  const result = await getFeed(mockFetcher, "https://example.com");
-  assertEquals(result.status, 200);
+## 2. 型安全性の確保
+
+### 2.1 型定義の原則
+```typescript
+// 必ず型定義から始める
+export type RSSFeedContent = {
+  title: string;
+  link: string;
+  items: RSSItem[];
+};
+
+// 外部データの型安全性
+export function assertIsRSSFeed(data: unknown): asserts data is RSSFeedContent {
+  // 型チェックロジック
+}
+```
+
+### 2.2 型チェックの徹底
+- unknown型からの安全な型変換
+- 型ガード関数の活用
+- 実行時の型チェック
+
+## 3. テスト駆動開発（TDD）
+
+### 3.1 テストファイル構成
+```typescript
+Deno.test("RSSフィード処理", async (t) => {
+  await t.step("パース - 正常系", async () => {
+    // 正常系テスト
+  });
+  
+  await t.step("パース - 異常系", async () => {
+    // エラーケース
+  });
+  
+  await t.step("キャッシュ - 有効期限", async () => {
+    // キャッシュテスト
+  });
 });
 ```
 
-### デバッグと問題解決
-1. ログ戦略
+### 3.2 テストカバレッジ要件
+- ユニットテスト: 90%以上
+- 統合テスト: 80%以上
+- E2Eテスト: 主要フロー網羅
+
+## 4. エラー処理とロギング
+
+### 4.1 エラーハンドリング
 ```typescript
-// 段階的なデバッグ情報
-console.debug("入力値:", input);
-console.debug("処理状態:", state);
-console.debug("出力値:", output);
-```
-
-2. エラー特定プロセス
-- エラーの再現手順の文書化
-- 二分法によるエラー箇所の特定
-- 修正計画の立案と実行
-
-## 2. プロジェクト構造
-
-```
-/
-├── routes/      # ルートハンドラー
-├── tests/       # テストファイル
-├── types/       # 型定義ファイル
-└── scripts/     # ユーティリティスクリプト
-```
-
-## 3. 命名規則
-
-### ファイル名
-- 型定義: `{機能名}.types.ts`
-- テスト: `{機能名}_test.ts`
-- 実装: `{機能名}.ts`
-
-### 変数・関数名
-- インターフェース: `I` プレフィックスは使用しない
-- 型: パスカルケース（例：`FeedResponse`）
-- 変数・関数: キャメルケース（例：`getFeedContent`）
-
-## 4. コード規約
-
-### モジュール設計
-```typescript
-// 疎結合なモジュール設計
-export interface FeedService {
-  getFeed(url: string): Promise<FeedResponse>;
-}
-
-export class RSSFeedService implements FeedService {
-  constructor(private fetcher: FeedFetcher) {}
-  // 実装
-}
-```
-
-
-
-### 非同期処理
-- async/awaitを使用
-- Promise chainingは避ける
-- エラーハンドリングを必ず含める
-
-## 5. セキュリティガイドライン
-
-### 入力検証
-```typescript
-// 型による安全性の確保
-function validateInput(input: unknown): asserts input is ValidInput {
-  if (!isValidInput(input)) {
-    throw new ValidationError("不正な入力");
+export class RSSFetchError extends Error {
+  constructor(
+    public readonly url: string,
+    public readonly statusCode: number,
+    message: string,
+  ) {
+    super(`Failed to fetch RSS from ${url}: ${message}`);
   }
 }
 ```
 
-### アクセス制御
-- 型安全な認証・認可の実装
-- セキュリティ上の懸念事項は型で表現
+### 4.2 ログレベル定義
+- DEBUG: 開発時のデバッグ情報
+- INFO: 重要な処理の開始/完了
+- WARN: 処理は継続可能な警告
+- ERROR: 重大なエラー
 
-## 6. キャッシュ戦略
+## 5. パフォーマンスとキャッシュ
 
-### 型安全なキャッシュ操作
+### 5.1 パフォーマンス要件
+- レスポンスタイム: 95%ile < 1000ms
+- メモリ使用量: < 512MB
+- 同時接続数: 100req/sec
+
+### 5.2 キャッシュ戦略
 ```typescript
-interface CacheEntry<T> {
-  value: T;
-  timestamp: number;
-  size?: number;  // データサイズの追跡
+interface CacheConfig {
+  maxAge: number;
+  staleWhileRevalidate: number;
+  maxSize: number;
 }
 
-async function getCached<T>(key: string[]): Promise<CacheEntry<T> | null> {
-  return await kv.get(key);
-}
-```
-
-### キャッシュ管理
-- データサイズの監視と制限
-- 有効期限の設定と自動クリーンアップ
-- メモリ使用量の最適化
-
-## 7. テスト規約
-
-### テストファイル構造
-```typescript
-// 準備
-const testData: TestInput = {
-  url: "https://example.com",
-  expected: "<?xml..."
+const DEFAULT_CACHE_CONFIG: CacheConfig = {
+  maxAge: 3600,
+  staleWhileRevalidate: 300,
+  maxSize: 1024 * 1024 * 10, // 10MB
 };
-
-// テストケース
-Deno.test("機能テスト", async (t) => {
-  await t.step("正常系", async () => {
-    // テスト実装
-  });
-  
-  await t.step("異常系", async () => {
-    // エラーケースのテスト
-  });
-});
 ```
 
-### テストカバレッジ
-- 型の境界値テスト
-- エッジケースの網羅
-- モック/スタブの適切な使用
+## 6. セキュリティ
 
-### XMLパース関連テスト
-- パーサーの選択と妥当性確認
-- リンク書き換えの正確性検証
-- 異常系XMLのハンドリング
+### 6.1 入力検証
+- URLの検証
+- XMLインジェクション対策
+- リクエスト制限
 
-## 8. デバッグ戦略
+### 6.2 出力エスケープ
+- HTML/XMLエスケープ
+- JSONシリアライズ時の検証
 
-### ログレベル
-- DEBUG: 詳細な処理情報
-- INFO: 重要なイベント
-- WARN: 警告
-- ERROR: エラー情報
+## 7. コードレビュー基準
 
-### 問題解決手順
-1. エラーの再現と記録
-2. ログによる問題箇所の特定
-3. 二分法による原因の絞り込み
-4. 修正計画の立案
-5. テストによる修正の検証
+### 7.1 レビュー必須項目
+- [ ] 型定義の適切性
+- [ ] テストの十分性
+- [ ] エラーハンドリングの完全性
+- [ ] パフォーマンスへの影響
+- [ ] セキュリティ上の懸念
 
-## 9. タスク管理
+### 7.2 リファクタリング基準
+- 重複コードの排除
+- 関数の単一責任
+- 適切な抽象化レベル
 
-### TODO管理
-- TODOリストの定期的な更新
-- 完了したタスクのマーク
-- 未完了タスクの優先順位付け
+## 8. デプロイメント
 
-### 実装優先順位
-1. セキュリティ関連の実装
-2. コア機能の実装
-3. パフォーマンス最適化
-4. 機能拡張
+### 8.1 デプロイ前チェックリスト
+- [ ] すべてのテストが通過
+- [ ] パフォーマンステストの実施
+- [ ] セキュリティスキャンの完了
+- [ ] ドキュメントの更新
 
-## 10. パフォーマンス最適化
-
-- 型レベルでのパフォーマンス考慮
-- 早期のパフォーマンステスト実施
-- 型による最適化の保証
-- KVストアのパフォーマンスモニタリング
+### 8.2 モニタリング要件
+- エラーレート監視
+- レスポンスタイム監視
+- リソース使用率監視
