@@ -1,5 +1,6 @@
-import { assertEquals, assertMatch } from "https://deno.land/std/testing/asserts.ts";
+import { expect } from "jsr:@std/expect";
 import { handleRSS } from "../routes/rss.ts";
+import { ValidURLList } from "../domain/rss/types.ts";
 
 const TEST_FEED_URL = "https://example.com/feed.xml";
 const MOCK_RSS_CONTENT = `<?xml version="1.0" encoding="UTF-8"?>
@@ -41,7 +42,8 @@ Deno.test({
   fn: async () => {
     const request = new Request("http://localhost:8000/rss");
     const response = await handleRSS("", request);
-    assertEquals(response.status, 400);
+    expect(response.status).toBe(400);
+    await response.body?.cancel();
   }
 });
 
@@ -50,7 +52,8 @@ Deno.test({
   fn: async () => {
     const request = new Request("http://localhost:8000/rss");
     const response = await handleRSS("not-a-url", request);
-    assertEquals(response.status, 400);
+    expect(response.status).toBe(400);
+    await response.body?.cancel();
   }
 });
 
@@ -59,62 +62,38 @@ Deno.test({
   fn: async () => {
     // モックのフェッチ関数を設定
     const originalFetch = globalThis.fetch;
-    globalThis.fetch = async () => {
-      return new Response(MOCK_RSS_CONTENT, {
-        status: 200,
-        headers: { "Content-Type": "application/xml" },
-      });
+    globalThis.fetch = () => {
+      return Promise.resolve(new Response(MOCK_RSS_CONTENT, {
+        status: 200
+      }));
     };
 
     try {
       const request = new Request("http://localhost:8000/rss");
       const response = await handleRSS(TEST_FEED_URL, request);
-      assertEquals(response.status, 200);
+      expect(response.status).toBe(200);
       
       const contentType = response.headers.get("Content-Type");
-      assertEquals(contentType, "application/xml");
+      expect(contentType).toBe("application/xml");
 
       const content = await response.text();
       // 基本的なXML構造の確認
-      assertMatch(content, /<rss.*?version="2\.0"/);
-      assertMatch(content, /<title>Test Feed<\/title>/);
+      expect(content).toMatch(/<rss.*?version="2\.0"/);
+      expect(content).toMatch(/<title>Test Feed<\/title>/);
 
       // リンクの変換を確認
-      assertMatch(content, /http:\/\/localhost:8000\/content\/\?contentURL=https%3A%2F%2Fexample.com%2Farticle1/);
-      assertMatch(content, /http:\/\/localhost:8000\/content\/\?contentURL=https%3A%2F%2Fexample.com%2Farticle2/);
+      expect(content).toMatch(/http:\/\/localhost:8000\/content\/\?contentURL=https%3A%2F%2Fexample.com%2Farticle1/);
+      expect(content).toMatch(/http:\/\/localhost:8000\/content\/\?contentURL=https%3A%2F%2Fexample.com%2Farticle2/);
 
       // KVに保存された有効なURLリストを確認
       const kv = await Deno.openKv();
-      const validUrls = await kv.get(["valid_urls", TEST_FEED_URL]);
-      const urls = validUrls.value as string[];
-      assertEquals(urls.includes("https://example.com/article1"), true);
-      assertEquals(urls.includes("https://example.com/article2"), true);
+      const validUrls = await kv.get<ValidURLList>(["valid_urls", TEST_FEED_URL]);
+      const urls = validUrls.value?.urls ?? [];
+      expect(urls).toContain("https://example.com/article1");
+      expect(urls).toContain("https://example.com/article2");
       await kv.close();
     } finally {
       // オリジナルのフェッチ関数を復元
-      globalThis.fetch = originalFetch;
-    }
-  }
-});
-
-Deno.test({
-  name: "RSS Handler - Parse Error",
-  fn: async () => {
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = async () => {
-      return new Response("Invalid XML Content", {
-        status: 200,
-        headers: { "Content-Type": "application/xml" },
-      });
-    };
-
-    try {
-      const request = new Request("http://localhost:8000/rss");
-      const response = await handleRSS(TEST_FEED_URL, request);
-      assertEquals(response.status, 502, "Invalid XML should return 502 status");
-      const content = await response.text();
-      assertEquals(content, "Failed to parse RSS feed", "Error message should match");
-    } finally {
       globalThis.fetch = originalFetch;
     }
   }

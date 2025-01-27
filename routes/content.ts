@@ -1,4 +1,3 @@
-import { Context } from "hono";
 import { RSSRepository } from "../domain/rss/repository.ts";
 import { ResponseHelper } from "../domain/rss/response_helper.ts";
 
@@ -27,7 +26,6 @@ export async function handleContent(contentURL: string, request: Request): Promi
     }
 
     const content = await response.text();
-    const contentType = response.headers.get("Content-Type") || "text/html";
 
     return ResponseHelper.createHTMLResponse(content, {
       originalUrl: contentURL,

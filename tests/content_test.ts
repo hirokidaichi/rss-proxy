@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
+import { expect } from "jsr:@std/expect";
 import { handleContent } from "../routes/content.ts";
 
 const TEST_CONTENT_URL = "https://example.com/article1";
@@ -34,42 +34,45 @@ Deno.test("Content Handler - Setup", async () => {
 Deno.test("Content Handler - Missing URL", async () => {
   const request = new Request("http://localhost:8000/content");
   const response = await handleContent("", request);
-  assertEquals(response.status, 400);
+  expect(response.status).toBe(400);
+  await response.body?.cancel();
 });
 
 Deno.test("Content Handler - Invalid URL", async () => {
   const request = new Request("http://localhost:8000/content");
   const response = await handleContent("not-a-url", request);
-  assertEquals(response.status, 400);
+  expect(response.status).toBe(400);
+  await response.body?.cancel();
 });
 
 Deno.test("Content Handler - URL Not in Allowed List", async () => {
   const request = new Request("http://localhost:8000/content");
   const response = await handleContent("https://example.com/not-allowed", request);
-  assertEquals(response.status, 403);
+  expect(response.status).toBe(403);
+  await response.body?.cancel();
 });
 
 Deno.test("Content Handler - Successful Response", async () => {
   // モックのフェッチ関数を設定
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () => {
-    return new Response(MOCK_HTML_CONTENT, {
+  globalThis.fetch = () => {
+    return Promise.resolve(new Response(MOCK_HTML_CONTENT, {
       status: 200,
       headers: { "Content-Type": "text/html; charset=UTF-8" },
-    });
+    }));
   };
 
   try {
     const request = new Request("http://localhost:8000/content");
     const response = await handleContent(TEST_CONTENT_URL, request);
-    assertEquals(response.status, 200);
+    expect(response.status).toBe(200);
     
     const contentType = response.headers.get("Content-Type");
-    assertEquals(contentType, "text/html; charset=UTF-8");
+    expect(contentType).toBe("text/html; charset=UTF-8");
 
     const content = await response.text();
-    assertEquals(content.includes("Test Content"), true);
-    assertEquals(content.includes("test article content"), true);
+    expect(content).toContain("Test Content");
+    expect(content).toContain("test article content");
   } finally {
     // オリジナルのフェッチ関数を復元
     globalThis.fetch = originalFetch;
@@ -78,14 +81,15 @@ Deno.test("Content Handler - Successful Response", async () => {
 
 Deno.test("Content Handler - Fetch Error", async () => {
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () => {
-    throw new Error("Network error");
+  globalThis.fetch = () => {
+    return Promise.reject(new Error("Network error"));
   };
 
   try {
     const request = new Request("http://localhost:8000/content");
     const response = await handleContent(TEST_CONTENT_URL, request);
-    assertEquals(response.status, 502);
+    expect(response.status).toBe(502);
+    await response.body?.cancel();
   } finally {
     globalThis.fetch = originalFetch;
   }

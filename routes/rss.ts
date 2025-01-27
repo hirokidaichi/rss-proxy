@@ -40,35 +40,41 @@ export async function handleRSS(feedURL: string, request: Request): Promise<Resp
 
     const content = await response.text();
 
-    // RSSのパースと変換
-    const doc = await RSSParser.parse(content);
-    const { transformed, originalUrls } = transformer.transform(doc);
-    const transformedContent = transformer.toXmlString(transformed);
+    // 基本的なXMLバリデーション
+    if (!content.trim().startsWith("<?xml") && !content.trim().startsWith("<rss")) {
+      return ResponseHelper.createErrorResponse("Invalid XML format: Document must start with XML declaration or RSS tag", 502);
+    }
 
-    // 有効なURLリストを保存
-    await repository.saveValidUrls(feedURL, originalUrls);
+    try {
+      // RSSのパースと変換
+      const doc = await RSSParser.parse(content);
+      const { transformed, originalUrls } = transformer.transform(doc);
+      const transformedContent = transformer.toXmlString(transformed);
 
-    // キャッシュに保存
-    await repository.cacheContent(feedURL, transformedContent);
+      // 有効なURLリストを保存
+      await repository.saveValidUrls(feedURL, originalUrls);
 
-    const timestamp = Date.now();
-    return ResponseHelper.createXMLResponse(transformedContent, {
-      cacheHit: false,
-      timestamp,
-      compress: ResponseHelper.supportsCompression(request)
-    });
+      // キャッシュに保存
+      await repository.cacheContent(feedURL, transformedContent);
 
-  } catch (error) {
+      const timestamp = Date.now();
+      return ResponseHelper.createXMLResponse(transformedContent, {
+        cacheHit: false,
+        timestamp,
+        compress: ResponseHelper.supportsCompression(request)
+      });
+    } catch (error: unknown) {
+      if (error instanceof SyntaxError) {
+        return ResponseHelper.createErrorResponse(`Failed to parse XML: ${error.message}`, 502);
+      }
+      if (error instanceof ParseError || error instanceof ValidationError) {
+        return ResponseHelper.createErrorResponse(error.message, 502);
+      }
+      throw error;
+    }
+
+  } catch (error: unknown) {
     console.error("Error processing RSS:", error);
-
-    if (error instanceof ValidationError) {
-      return ResponseHelper.createErrorResponse(error.message, 400);
-    }
-
-    if (error instanceof ParseError) {
-      return ResponseHelper.createErrorResponse(error.message, 502);
-    }
-
     return ResponseHelper.createErrorResponse("Internal server error", 500);
   }
 }

@@ -1,4 +1,4 @@
-import { parse } from "https://deno.land/x/xml@2.1.3/mod.ts";
+import { parse } from "https://deno.land/x/xml@6.0.4/mod.ts";
 import { RSSDocument, ParseError, ValidationError } from "./types.ts";
 
 export class RSSParser {
@@ -17,7 +17,8 @@ export class RSSParser {
 
     let doc: unknown;
     try {
-      doc = parse(content);
+      doc = await Promise.resolve(parse(content));
+      console.log("Parsed document:", JSON.stringify(doc, null, 2));
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       throw new ParseError(`Failed to parse XML: ${errorMessage}`);
@@ -50,6 +51,11 @@ export class RSSParser {
       return false;
     }
 
+    // RSSの仕様では複数のchannelは許可されていない
+    if (Array.isArray(maybeRSS.rss.channel)) {
+      return false;
+    }
+
     return true;
   }
 
@@ -60,9 +66,6 @@ export class RSSParser {
     if (typeof item !== "object" || item === null) {
       return false;
     }
-
-    const rssItem = item as { title?: unknown; link?: unknown; description?: unknown };
-
     return true;
   }
 
