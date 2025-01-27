@@ -18,11 +18,13 @@ const SAMPLE_RSS_DOC: RSSDocument = {
           title: "Test Item 1",
           link: "https://example.com/article1",
           description: "Test Description 1",
+          pubDate: "Mon, 01 Jan 2024 00:00:00 GMT",
         },
         {
           title: "Test Item 2",
           link: "https://example.com/article2",
           description: "Test Description 2",
+          pubDate: "Tue, 02 Jan 2024 00:00:00 GMT",
         },
       ],
     },
@@ -39,6 +41,7 @@ const SINGLE_ITEM_RSS_DOC: RSSDocument = {
         title: "Test Item",
         link: "https://example.com/article",
         description: "Test Description",
+        pubDate: "Mon, 01 Jan 2024 00:00:00 GMT",
       },
     },
   },
@@ -172,4 +175,53 @@ Deno.test("RSSTransformer - Empty Document", () => {
   assertStringIncludes(xmlString, "<title></title>");
   assertStringIncludes(xmlString, "<link></link>");
   assertStringIncludes(xmlString, "<description></description>");
+});
+
+Deno.test("RSSTransformer - Preserve pubDate in XML Output", () => {
+  const transformer = new RSSTransformer(TEST_BASE_URL);
+  const { transformed } = transformer.transform(SAMPLE_RSS_DOC);
+  const xmlString = transformer.toXmlString(transformed);
+
+  // pubDateが保持されていることを確認
+  assertStringIncludes(xmlString, "<pubDate>Mon, 01 Jan 2024 00:00:00 GMT</pubDate>");
+  assertStringIncludes(xmlString, "<pubDate>Tue, 02 Jan 2024 00:00:00 GMT</pubDate>");
+});
+
+Deno.test("RSSTransformer - Transform Should Not Modify pubDate", () => {
+  const transformer = new RSSTransformer(TEST_BASE_URL);
+  const { transformed } = transformer.transform(SAMPLE_RSS_DOC);
+
+  // transformメソッドがpubDateを変更していないことを確認
+  const items = transformed.rss?.channel?.item;
+  if (Array.isArray(items)) {
+    assertEquals(items[0].pubDate, "Mon, 01 Jan 2024 00:00:00 GMT");
+    assertEquals(items[1].pubDate, "Tue, 02 Jan 2024 00:00:00 GMT");
+  }
+});
+
+Deno.test("RSSTransformer - Special Characters in pubDate", () => {
+  const specialPubDateDoc: RSSDocument = {
+    rss: {
+      channel: {
+        title: "Test Feed",
+        link: "https://example.com",
+        description: "Test Description",
+        item: {
+          title: "Test Item",
+          link: "https://example.com/article",
+          description: "Test Description",
+          pubDate: "Mon & Tue, 01 < 02 Jan 2024 00:00:00 GMT",
+        },
+      },
+    },
+  };
+
+  const transformer = new RSSTransformer(TEST_BASE_URL);
+  const xmlString = transformer.toXmlString(specialPubDateDoc);
+
+  // pubDateの特殊文字がエスケープされていることを確認
+  assertStringIncludes(
+    xmlString,
+    "<pubDate>Mon &amp; Tue, 01 &lt; 02 Jan 2024 00:00:00 GMT</pubDate>",
+  );
 });

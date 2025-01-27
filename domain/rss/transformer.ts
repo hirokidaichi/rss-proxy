@@ -107,6 +107,7 @@ export class RSSTransformer {
       <title>${this.escapeXml(item.title || "")}</title>
       <link>${this.escapeXml(item.link || "")}</link>
       <description>${this.escapeXml(item.description || "")}</description>
+      <pubDate>${this.escapeXml(item.pubDate || "")}</pubDate>
     </item>`;
   }
 
