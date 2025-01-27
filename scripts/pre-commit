@@ -14,7 +14,7 @@ fi
 
 # Denoのテストを実行
 echo "Running Deno tests..."
-deno test --allow-net --unstable-kv
+deno test --allow-net --allow-run --unstable-kv
 
 # テストの終了コードを取得
 TEST_RESULT=$?
