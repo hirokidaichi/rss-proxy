@@ -81,9 +81,11 @@ Deno.test({
       expect(content).toMatch(/<rss.*?version="2\.0"/);
       expect(content).toMatch(/<title>Test Feed<\/title>/);
 
-      // リンクの変換を確認
-      expect(content).toMatch(/http:\/\/localhost:8000\/content\/\?contentURL=https%3A%2F%2Fexample.com%2Farticle1/);
-      expect(content).toMatch(/http:\/\/localhost:8000\/content\/\?contentURL=https%3A%2F%2Fexample.com%2Farticle2/);
+      // リンクの変換を確認（ホスト名はリクエストURLから取得）
+      const url = new URL(request.url);
+      const baseUrl = `${url.protocol}//${url.host}`;
+      expect(content).toMatch(new RegExp(`${baseUrl}/content/\\?contentURL=https%3A%2F%2Fexample.com%2Farticle1`));
+      expect(content).toMatch(new RegExp(`${baseUrl}/content/\\?contentURL=https%3A%2F%2Fexample.com%2Farticle2`));
 
       // KVに保存された有効なURLリストを確認
       const kv = await Deno.openKv();

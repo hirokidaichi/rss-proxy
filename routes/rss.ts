@@ -6,9 +6,13 @@ import { ParseError, ValidationError } from "../domain/rss/types.ts";
 
 const kv = await Deno.openKv();
 const repository = new RSSRepository(kv);
-const transformer = new RSSTransformer("http://localhost:8000");
 
 export async function handleRSS(feedURL: string, request: Request): Promise<Response> {
+  // リクエストからホスト名を取得
+  const url = new URL(request.url);
+  const baseUrl = `${url.protocol}//${url.host}`;
+  const transformer = new RSSTransformer(baseUrl);
+
   // バリデーション
   try {
     new URL(feedURL);
