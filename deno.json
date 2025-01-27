@@ -1,0 +1,14 @@
+{
+  "tasks": {
+    "start": "deno run --allow-net --allow-env --unstable-kv main.ts",
+    "test": "deno test --allow-net --unstable-kv",
+    "dev": "deno run --watch --allow-net --allow-env --unstable-kv main.ts"
+  },
+  "imports": {
+    "@/": "./",
+    "@routes/": "./routes/",
+    "@tests/": "./tests/",
+    "hono": "https://deno.land/x/hono@v3.11.11/mod.ts",
+    "hono/": "https://deno.land/x/hono@v3.11.11/"
+  }
+}

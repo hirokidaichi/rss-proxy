@@ -1,0 +1,17 @@
+#!/bin/sh
+
+# Denoのテストを実行
+echo "Running Deno tests..."
+deno test --allow-net
+
+# テストの終了コードを取得
+TEST_RESULT=$?
+
+# テストが失敗した場合はコミットを中止
+if [ $TEST_RESULT -ne 0 ]; then
+  echo "Tests failed. Commit aborted."
+  exit 1
+fi
+
+echo "All tests passed. Proceeding with commit."
+exit 0
