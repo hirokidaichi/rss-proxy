@@ -1,4 +1,4 @@
-import { RSSDocument, RSSChannel, RSSItem } from "./types.ts";
+import { RSSChannel, RSSDocument, RSSItem } from "./types.ts";
 
 export class RSSTransformer {
   private baseUrl: string;
@@ -10,7 +10,9 @@ export class RSSTransformer {
   /**
    * RSSドキュメント内のリンクを変換
    */
-  transform(doc: RSSDocument): { transformed: RSSDocument; originalUrls: Set<string> } {
+  transform(
+    doc: RSSDocument,
+  ): { transformed: RSSDocument; originalUrls: Set<string> } {
     const originalUrls = new Set<string>();
     const channel = doc.rss?.channel;
 
@@ -22,7 +24,7 @@ export class RSSTransformer {
     const transformedChannel = transformedDoc.rss!.channel!;
 
     if (Array.isArray(transformedChannel.item)) {
-      transformedChannel.item = transformedChannel.item.map(item => {
+      transformedChannel.item = transformedChannel.item.map((item: RSSItem) => {
         const { transformedItem, originalUrl } = this.transformItem(item);
         if (originalUrl) {
           originalUrls.add(originalUrl);
@@ -30,7 +32,9 @@ export class RSSTransformer {
         return transformedItem;
       });
     } else if (transformedChannel.item) {
-      const { transformedItem, originalUrl } = this.transformItem(transformedChannel.item);
+      const { transformedItem, originalUrl } = this.transformItem(
+        transformedChannel.item,
+      );
       if (originalUrl) {
         originalUrls.add(originalUrl);
       }
@@ -63,7 +67,9 @@ export class RSSTransformer {
   /**
    * 個別のRSSアイテムのリンクを変換
    */
-  private transformItem(item: RSSItem): { transformedItem: RSSItem; originalUrl: string | null } {
+  private transformItem(
+    item: RSSItem,
+  ): { transformedItem: RSSItem; originalUrl: string | null } {
     if (!item.link) {
       return { transformedItem: { ...item }, originalUrl: null };
     }
@@ -71,7 +77,9 @@ export class RSSTransformer {
     const originalUrl = item.link;
     const transformedItem = {
       ...item,
-      link: `${this.baseUrl}/content/?contentURL=${encodeURIComponent(originalUrl)}`
+      link: `${this.baseUrl}/content/?contentURL=${
+        encodeURIComponent(originalUrl)
+      }`,
     };
 
     return { transformedItem, originalUrl };
@@ -83,7 +91,7 @@ export class RSSTransformer {
   private itemsToXmlString(channel: RSSChannel): string {
     if (Array.isArray(channel.item)) {
       return channel.item
-        .map(item => this.singleItemToXmlString(item))
+        .map((item) => this.singleItemToXmlString(item))
         .join("\n    ");
     } else if (channel.item) {
       return this.singleItemToXmlString(channel.item);

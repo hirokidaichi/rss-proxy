@@ -7,7 +7,10 @@ import { ParseError, ValidationError } from "../domain/rss/types.ts";
 const kv = await Deno.openKv();
 const repository = new RSSRepository(kv);
 
-export async function handleRSS(feedURL: string, request: Request): Promise<Response> {
+export async function handleRSS(
+  feedURL: string,
+  request: Request,
+): Promise<Response> {
   // リクエストからホスト名を取得
   const url = new URL(request.url);
   const baseUrl = `${url.protocol}//${url.host}`;
@@ -32,21 +35,29 @@ export async function handleRSS(feedURL: string, request: Request): Promise<Resp
       return ResponseHelper.createXMLResponse(cached.content, {
         cacheHit: true,
         timestamp: cached.timestamp,
-        compress: ResponseHelper.supportsCompression(request)
+        compress: ResponseHelper.supportsCompression(request),
       });
     }
 
     // RSSフィードの取得
     const response = await fetch(feedURL);
     if (!response.ok) {
-      return ResponseHelper.createErrorResponse("Failed to fetch RSS feed", 502);
+      return ResponseHelper.createErrorResponse(
+        "Failed to fetch RSS feed",
+        502,
+      );
     }
 
     const content = await response.text();
 
     // 基本的なXMLバリデーション
-    if (!content.trim().startsWith("<?xml") && !content.trim().startsWith("<rss")) {
-      return ResponseHelper.createErrorResponse("Invalid XML format: Document must start with XML declaration or RSS tag", 502);
+    if (
+      !content.trim().startsWith("<?xml") && !content.trim().startsWith("<rss")
+    ) {
+      return ResponseHelper.createErrorResponse(
+        "Invalid XML format: Document must start with XML declaration or RSS tag",
+        502,
+      );
     }
 
     try {
@@ -65,20 +76,25 @@ export async function handleRSS(feedURL: string, request: Request): Promise<Resp
       return ResponseHelper.createXMLResponse(transformedContent, {
         cacheHit: false,
         timestamp,
-        compress: ResponseHelper.supportsCompression(request)
+        compress: ResponseHelper.supportsCompression(request),
       });
     } catch (error: unknown) {
       if (error instanceof SyntaxError) {
-        return ResponseHelper.createErrorResponse(`Failed to parse XML: ${error.message}`, 502);
+        return ResponseHelper.createErrorResponse(
+          `Failed to parse XML: ${error.message}`,
+          502,
+        );
       }
       if (error instanceof ParseError || error instanceof ValidationError) {
         return ResponseHelper.createErrorResponse(error.message, 502);
       }
       throw error;
     }
-
   } catch (error: unknown) {
     console.error("Error processing RSS:", error);
-    return ResponseHelper.createErrorResponse("Internal server error", 500);
+    return ResponseHelper.createErrorResponse(
+      error instanceof Error ? error.message : "Internal server error",
+      502,
+    );
   }
 }

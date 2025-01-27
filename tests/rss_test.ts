@@ -34,7 +34,7 @@ Deno.test({
   name: "RSS Handler - Setup",
   fn: async () => {
     await cleanupTestData();
-  }
+  },
 });
 
 Deno.test({
@@ -44,7 +44,7 @@ Deno.test({
     const response = await handleRSS("", request);
     expect(response.status).toBe(400);
     await response.body?.cancel();
-  }
+  },
 });
 
 Deno.test({
@@ -54,7 +54,7 @@ Deno.test({
     const response = await handleRSS("not-a-url", request);
     expect(response.status).toBe(400);
     await response.body?.cancel();
-  }
+  },
 });
 
 Deno.test({
@@ -63,16 +63,18 @@ Deno.test({
     // モックのフェッチ関数を設定
     const originalFetch = globalThis.fetch;
     globalThis.fetch = () => {
-      return Promise.resolve(new Response(MOCK_RSS_CONTENT, {
-        status: 200
-      }));
+      return Promise.resolve(
+        new Response(MOCK_RSS_CONTENT, {
+          status: 200,
+        }),
+      );
     };
 
     try {
       const request = new Request("http://localhost:8000/rss");
       const response = await handleRSS(TEST_FEED_URL, request);
       expect(response.status).toBe(200);
-      
+
       const contentType = response.headers.get("Content-Type");
       expect(contentType).toBe("application/xml");
 
@@ -84,12 +86,23 @@ Deno.test({
       // リンクの変換を確認（ホスト名はリクエストURLから取得）
       const url = new URL(request.url);
       const baseUrl = `${url.protocol}//${url.host}`;
-      expect(content).toMatch(new RegExp(`${baseUrl}/content/\\?contentURL=https%3A%2F%2Fexample.com%2Farticle1`));
-      expect(content).toMatch(new RegExp(`${baseUrl}/content/\\?contentURL=https%3A%2F%2Fexample.com%2Farticle2`));
+      expect(content).toMatch(
+        new RegExp(
+          `${baseUrl}/content/\\?contentURL=https%3A%2F%2Fexample.com%2Farticle1`,
+        ),
+      );
+      expect(content).toMatch(
+        new RegExp(
+          `${baseUrl}/content/\\?contentURL=https%3A%2F%2Fexample.com%2Farticle2`,
+        ),
+      );
 
       // KVに保存された有効なURLリストを確認
       const kv = await Deno.openKv();
-      const validUrls = await kv.get<ValidURLList>(["valid_urls", TEST_FEED_URL]);
+      const validUrls = await kv.get<ValidURLList>([
+        "valid_urls",
+        TEST_FEED_URL,
+      ]);
       const urls = validUrls.value?.urls ?? [];
       expect(urls).toContain("https://example.com/article1");
       expect(urls).toContain("https://example.com/article2");
@@ -98,12 +111,12 @@ Deno.test({
       // オリジナルのフェッチ関数を復元
       globalThis.fetch = originalFetch;
     }
-  }
+  },
 });
 
 Deno.test({
   name: "RSS Handler - Cleanup",
   fn: async () => {
     await cleanupTestData();
-  }
+  },
 });

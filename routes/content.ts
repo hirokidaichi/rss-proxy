@@ -4,7 +4,10 @@ import { ResponseHelper } from "../domain/rss/response_helper.ts";
 const kv = await Deno.openKv();
 const repository = new RSSRepository(kv);
 
-export async function handleContent(contentURL: string, request: Request): Promise<Response> {
+export async function handleContent(
+  contentURL: string,
+  request: Request,
+): Promise<Response> {
   // バリデーション
   try {
     new URL(contentURL);
@@ -15,7 +18,10 @@ export async function handleContent(contentURL: string, request: Request): Promi
   // URLが有効なリストに含まれているか確認
   const isValidUrl = await repository.isValidContentUrl(contentURL);
   if (!isValidUrl) {
-    return ResponseHelper.createErrorResponse("URL not found in allowed list", 403);
+    return ResponseHelper.createErrorResponse(
+      "URL not found in allowed list",
+      403,
+    );
   }
 
   try {
@@ -29,10 +35,13 @@ export async function handleContent(contentURL: string, request: Request): Promi
 
     return ResponseHelper.createHTMLResponse(content, {
       originalUrl: contentURL,
-      compress: ResponseHelper.supportsCompression(request)
+      compress: ResponseHelper.supportsCompression(request),
     });
   } catch (error) {
     console.error("Error fetching content:", error);
-    return ResponseHelper.createErrorResponse("Error fetching content", 502);
+    return ResponseHelper.createErrorResponse(
+      error instanceof Error ? error.message : "Error fetching content",
+      502,
+    );
   }
 }

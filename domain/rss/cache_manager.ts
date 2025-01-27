@@ -19,7 +19,7 @@ export class CacheManager {
       maxCacheSize?: number; // キャッシュの最大サイズ（バイト）
       cleanupInterval?: number; // クリーンアップの間隔（ミリ秒）
       memoryWarningThreshold?: number; // メモリ警告閾値（バイト）
-    } = {}
+    } = {},
   ) {
     this.kv = kv;
     this.maxCacheSize = options.maxCacheSize || 50 * 1024 * 1024; // デフォルト50MB
@@ -30,7 +30,7 @@ export class CacheManager {
       hits: 0,
       misses: 0,
       cleanups: 0,
-      lastCleanupDuration: 0
+      lastCleanupDuration: 0,
     };
   }
 
@@ -39,10 +39,12 @@ export class CacheManager {
    */
   async cacheContent(feedUrl: string, content: string): Promise<void> {
     const cacheSize = new TextEncoder().encode(content).length;
-    
+
     // キャッシュサイズをチェック
     if (cacheSize > this.maxCacheSize) {
-      console.warn(`Cache size (${cacheSize} bytes) exceeds maximum size (${this.maxCacheSize} bytes) for ${feedUrl}`);
+      console.warn(
+        `Cache size (${cacheSize} bytes) exceeds maximum size (${this.maxCacheSize} bytes) for ${feedUrl}`,
+      );
       return;
     }
 
@@ -50,7 +52,7 @@ export class CacheManager {
       content,
       timestamp: Date.now(),
       size: cacheSize,
-      lastAccessed: Date.now()
+      lastAccessed: Date.now(),
     };
 
     // 現在のキャッシュ使用量をチェック
@@ -69,7 +71,7 @@ export class CacheManager {
    */
   async getCachedContent(feedUrl: string): Promise<RSSCache | null> {
     const result = await this.kv.get<RSSCache>(["rss", feedUrl]);
-    
+
     if (!result.value) {
       this.metrics.misses++;
       return null;
@@ -96,7 +98,7 @@ export class CacheManager {
   async saveValidUrls(feedUrl: string, urls: Set<string>): Promise<void> {
     const validUrlList: ValidURLList = {
       urls: Array.from(urls),
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     await this.kv.set(["valid_urls", feedUrl], validUrlList);
@@ -107,11 +109,13 @@ export class CacheManager {
    * URLが有効なリストに含まれているか確認
    */
   async isValidContentUrl(contentUrl: string): Promise<boolean> {
-    const validUrlsEntries = this.kv.list<ValidURLList>({ prefix: ["valid_urls"] });
-    
+    const validUrlsEntries = this.kv.list<ValidURLList>({
+      prefix: ["valid_urls"],
+    });
+
     for await (const entry of validUrlsEntries) {
       if (!entry.value) continue;
-      
+
       if (entry.value.urls.includes(contentUrl)) {
         return true;
       }
@@ -131,7 +135,7 @@ export class CacheManager {
   async getCurrentCacheSize(): Promise<number> {
     let totalSize = 0;
     const entries = this.kv.list<RSSCache>({ prefix: ["rss"] });
-    
+
     for await (const entry of entries) {
       if (entry.value.size) {
         totalSize += entry.value.size;
@@ -147,7 +151,8 @@ export class CacheManager {
   getMetrics() {
     return {
       ...this.metrics,
-      hitRate: this.metrics.hits / (this.metrics.hits + this.metrics.misses) || 0
+      hitRate: this.metrics.hits / (this.metrics.hits + this.metrics.misses) ||
+        0,
     };
   }
 
@@ -159,9 +164,17 @@ export class CacheManager {
     const usageRatio = currentSize / this.maxCacheSize;
 
     if (usageRatio > this.memoryWarningThreshold) {
-      console.warn(`High memory usage: ${(usageRatio * 100).toFixed(2)}% of maximum cache size`);
-      console.warn(`Current cache size: ${(currentSize / 1024 / 1024).toFixed(2)}MB`);
-      console.warn(`Maximum cache size: ${(this.maxCacheSize / 1024 / 1024).toFixed(2)}MB`);
+      console.warn(
+        `High memory usage: ${
+          (usageRatio * 100).toFixed(2)
+        }% of maximum cache size`,
+      );
+      console.warn(
+        `Current cache size: ${(currentSize / 1024 / 1024).toFixed(2)}MB`,
+      );
+      console.warn(
+        `Maximum cache size: ${(this.maxCacheSize / 1024 / 1024).toFixed(2)}MB`,
+      );
     }
   }
 
@@ -171,13 +184,15 @@ export class CacheManager {
   private async cleanupLRU(targetSpace: number): Promise<void> {
     const entries: { key: Deno.KvKey; value: RSSCache }[] = [];
     const rssEntries = this.kv.list<RSSCache>({ prefix: ["rss"] });
-    
+
     for await (const entry of rssEntries) {
       entries.push(entry);
     }
 
     // 最終アクセス時刻でソート
-    entries.sort((a, b) => (a.value.lastAccessed || 0) - (b.value.lastAccessed || 0));
+    entries.sort((a, b) =>
+      (a.value.lastAccessed || 0) - (b.value.lastAccessed || 0)
+    );
 
     let freedSpace = 0;
     for (const entry of entries) {
@@ -192,7 +207,7 @@ export class CacheManager {
    */
   private async checkAndCleanup(): Promise<void> {
     const now = Date.now();
-    
+
     // クリーンアップの間隔をチェック
     if (now - this.lastCleanup < this.cleanupInterval) {
       return;
@@ -237,6 +252,8 @@ export class CacheManager {
     console.log(`Cache cleanup completed in ${duration}ms:`);
     console.log(`- Cleaned ${cleanedCount} entries`);
     console.log(`- Freed ${(freedSpace / 1024 / 1024).toFixed(2)}MB of space`);
-    console.log(`- Current hit rate: ${(this.getMetrics().hitRate * 100).toFixed(2)}%`);
+    console.log(
+      `- Current hit rate: ${(this.getMetrics().hitRate * 100).toFixed(2)}%`,
+    );
   }
 }

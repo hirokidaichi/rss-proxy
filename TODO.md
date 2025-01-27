@@ -2,15 +2,17 @@
 
 ## 概要
 
-Deno で動作する API を作成する。  
+Deno で動作する API を作成する。\
 API には以下の 2 つのエンドポイントを実装する:
 
 1. `/rss/?feedURL=xxxx`
    - `feedURL` で指定された RSS を取得し、内容を中継(プロキシ)する
-   - RSS 内のエントリに含まれるリンクを、サーバ内の `/content` エンドポイントへの URL に置き換える
+   - RSS 内のエントリに含まれるリンクを、サーバ内の `/content`
+     エンドポイントへの URL に置き換える
    - レスポンスは Deno KV に 5 分間キャッシュする
 2. `/content/?contentURL=xxxx`
-   - `contentURL` で指定された URL が RSS に含まれる URL の場合のみ、その HTML を返す
+   - `contentURL` で指定された URL が RSS に含まれる URL の場合のみ、その HTML
+     を返す
    - キャッシュは行わない (都度 fetch する)
 
 ---
@@ -38,9 +40,12 @@ API には以下の 2 つのエンドポイントを実装する:
 #### テストコードの依存関係とメソッド名の修正
 
 - [x] テストファイルのDenoの標準ライブラリバージョンを明示的に指定
-  - [x] transformer_test.ts: `https://deno.land/std/testing/asserts.ts` → `https://deno.land/std@0.224.0/testing/asserts.ts`
-  - [x] parser_test.ts: `https://deno.land/std/testing/asserts.ts` → `https://deno.land/std@0.224.0/testing/asserts.ts`
-  - [x] repository_test.ts: `https://deno.land/std/testing/asserts.ts` → `https://deno.land/std@0.224.0/testing/asserts.ts`
+  - [x] transformer_test.ts: `https://deno.land/std/testing/asserts.ts` →
+        `https://deno.land/std@0.224.0/testing/asserts.ts`
+  - [x] parser_test.ts: `https://deno.land/std/testing/asserts.ts` →
+        `https://deno.land/std@0.224.0/testing/asserts.ts`
+  - [x] repository_test.ts: `https://deno.land/std/testing/asserts.ts` →
+        `https://deno.land/std@0.224.0/testing/asserts.ts`
 - [x] repository_test.tsのメソッド名を修正
   - [x] `cleanupExpiredCache()` → `cleanup()`
 

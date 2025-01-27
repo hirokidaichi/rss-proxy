@@ -19,7 +19,7 @@ export class ResponseHelper {
       timestamp?: number;
       compress?: boolean;
       maxAge?: number;
-    } = {}
+    } = {},
   ): Response {
     const contentBuffer = new TextEncoder().encode(content);
     const etag = new Md5().update(contentBuffer).toString();
@@ -31,7 +31,7 @@ export class ResponseHelper {
       "Vary": "Accept-Encoding, Accept, If-None-Match",
       "ETag": `"${etag}"`,
       "X-Content-Type-Options": "nosniff",
-      "X-Frame-Options": "DENY"
+      "X-Frame-Options": "DENY",
     });
 
     if (options.cacheHit !== undefined) {
@@ -44,7 +44,7 @@ export class ResponseHelper {
     }
 
     // コンテンツサイズに基づいて圧縮を判断
-    const shouldCompress = options.compress && 
+    const shouldCompress = options.compress &&
       contentBuffer.length >= this.MIN_COMPRESS_SIZE &&
       contentBuffer.length <= this.MAX_COMPRESS_SIZE;
 
@@ -55,7 +55,7 @@ export class ResponseHelper {
         headers.set("Content-Encoding", "br");
         return new Response(compressed, {
           status: options.status || 200,
-          headers
+          headers,
         });
       } catch (error) {
         console.warn("Brotli compression failed, falling back to gzip:", error);
@@ -64,14 +64,14 @@ export class ResponseHelper {
         headers.set("Content-Encoding", "gzip");
         return new Response(compressed, {
           status: options.status || 200,
-          headers
+          headers,
         });
       }
     }
 
     return new Response(content, {
       status: options.status || 200,
-      headers
+      headers,
     });
   }
 
@@ -85,7 +85,7 @@ export class ResponseHelper {
       originalUrl?: string;
       compress?: boolean;
       csp?: boolean;
-    } = {}
+    } = {},
   ): Response {
     const contentBuffer = new TextEncoder().encode(content);
     const etag = new Md5().update(contentBuffer).toString();
@@ -96,13 +96,13 @@ export class ResponseHelper {
       "Vary": "Accept-Encoding, Accept",
       "ETag": `"${etag}"`,
       "X-Content-Type-Options": "nosniff",
-      "X-Frame-Options": "DENY"
+      "X-Frame-Options": "DENY",
     });
 
     if (options.csp) {
       headers.set(
         "Content-Security-Policy",
-        "default-src 'self'; img-src 'self' https:; script-src 'self'; style-src 'self' 'unsafe-inline'"
+        "default-src 'self'; img-src 'self' https:; script-src 'self'; style-src 'self' 'unsafe-inline'",
       );
     }
 
@@ -111,7 +111,7 @@ export class ResponseHelper {
     }
 
     // コンテンツサイズに基づいて圧縮を判断
-    const shouldCompress = options.compress && 
+    const shouldCompress = options.compress &&
       contentBuffer.length >= this.MIN_COMPRESS_SIZE &&
       contentBuffer.length <= this.MAX_COMPRESS_SIZE;
 
@@ -121,7 +121,7 @@ export class ResponseHelper {
         headers.set("Content-Encoding", "br");
         return new Response(compressed, {
           status: options.status || 200,
-          headers
+          headers,
         });
       } catch (error) {
         console.warn("Brotli compression failed, falling back to gzip:", error);
@@ -129,14 +129,14 @@ export class ResponseHelper {
         headers.set("Content-Encoding", "gzip");
         return new Response(compressed, {
           status: options.status || 200,
-          headers
+          headers,
         });
       }
     }
 
     return new Response(content, {
       status: options.status || 200,
-      headers
+      headers,
     });
   }
 
@@ -148,18 +148,18 @@ export class ResponseHelper {
     status: number,
     options: {
       json?: boolean;
-    } = {}
+    } = {},
   ): Response {
     const headers = new Headers({
       "Cache-Control": "no-store, must-revalidate",
-      "X-Content-Type-Options": "nosniff"
+      "X-Content-Type-Options": "nosniff",
     });
 
     if (options.json) {
       headers.set("Content-Type", "application/json");
       return new Response(
         JSON.stringify({ error: message, status }),
-        { status, headers }
+        { status, headers },
       );
     }
 
@@ -207,8 +207,8 @@ export class ResponseHelper {
       headers: {
         "ETag": `"${etag}"`,
         "Cache-Control": "public, max-age=300, must-revalidate",
-        "X-Content-Type-Options": "nosniff"
-      }
+        "X-Content-Type-Options": "nosniff",
+      },
     });
   }
 

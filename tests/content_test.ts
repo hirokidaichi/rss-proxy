@@ -20,9 +20,9 @@ async function setupTestData() {
   await kv.set(["valid_urls", "test-feed"], {
     urls: [
       "https://example.com/article1",
-      "https://example.com/article2"
+      "https://example.com/article2",
     ],
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
   await kv.close();
 }
@@ -47,7 +47,10 @@ Deno.test("Content Handler - Invalid URL", async () => {
 
 Deno.test("Content Handler - URL Not in Allowed List", async () => {
   const request = new Request("http://localhost:8000/content");
-  const response = await handleContent("https://example.com/not-allowed", request);
+  const response = await handleContent(
+    "https://example.com/not-allowed",
+    request,
+  );
   expect(response.status).toBe(403);
   await response.body?.cancel();
 });
@@ -56,17 +59,19 @@ Deno.test("Content Handler - Successful Response", async () => {
   // モックのフェッチ関数を設定
   const originalFetch = globalThis.fetch;
   globalThis.fetch = () => {
-    return Promise.resolve(new Response(MOCK_HTML_CONTENT, {
-      status: 200,
-      headers: { "Content-Type": "text/html; charset=UTF-8" },
-    }));
+    return Promise.resolve(
+      new Response(MOCK_HTML_CONTENT, {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=UTF-8" },
+      }),
+    );
   };
 
   try {
     const request = new Request("http://localhost:8000/content");
     const response = await handleContent(TEST_CONTENT_URL, request);
     expect(response.status).toBe(200);
-    
+
     const contentType = response.headers.get("Content-Type");
     expect(contentType).toBe("text/html; charset=UTF-8");
 

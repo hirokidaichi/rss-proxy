@@ -1,10 +1,16 @@
-import { assertEquals, assertNotEquals } from "https://deno.land/std@0.224.0/testing/asserts.ts";
+import {
+  assertEquals,
+  assertNotEquals,
+} from "https://deno.land/std@0.224.0/testing/asserts.ts";
 import { RSSRepository } from "../repository.ts";
 import { RSSCache, ValidURLList } from "../types.ts";
 
 const TEST_FEED_URL = "https://example.com/feed.xml";
 const TEST_CONTENT = "Test RSS Content";
-const TEST_URLS = ["https://example.com/article1", "https://example.com/article2"];
+const TEST_URLS = [
+  "https://example.com/article1",
+  "https://example.com/article2",
+];
 
 // テスト用のKVインスタンスを作成
 async function createTestKv(): Promise<Deno.Kv> {
@@ -42,7 +48,7 @@ Deno.test({
       await cleanupTestData(kv);
       await kv.close();
     }
-  }
+  },
 });
 
 Deno.test({
@@ -55,7 +61,7 @@ Deno.test({
       // 期限切れのキャッシュを作成
       const expiredCache: RSSCache = {
         content: TEST_CONTENT,
-        timestamp: Date.now() - 6 * 60 * 1000 // 6分前
+        timestamp: Date.now() - 6 * 60 * 1000, // 6分前
       };
       await kv.set(["rss", TEST_FEED_URL], expiredCache);
 
@@ -70,7 +76,7 @@ Deno.test({
       await cleanupTestData(kv);
       await kv.close();
     }
-  }
+  },
 });
 
 Deno.test({
@@ -84,8 +90,12 @@ Deno.test({
       await repository.saveValidUrls(TEST_FEED_URL, new Set(TEST_URLS));
 
       // URLの有効性を確認
-      const isValid1 = await repository.isValidContentUrl("https://example.com/article1");
-      const isValid2 = await repository.isValidContentUrl("https://example.com/invalid");
+      const isValid1 = await repository.isValidContentUrl(
+        "https://example.com/article1",
+      );
+      const isValid2 = await repository.isValidContentUrl(
+        "https://example.com/invalid",
+      );
 
       assertEquals(isValid1, true);
       assertEquals(isValid2, false);
@@ -93,7 +103,7 @@ Deno.test({
       await cleanupTestData(kv);
       await kv.close();
     }
-  }
+  },
 });
 
 Deno.test({
@@ -106,21 +116,21 @@ Deno.test({
       // 有効なキャッシュを作成
       const validCache: RSSCache = {
         content: TEST_CONTENT,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
       await kv.set(["rss", "valid-feed"], validCache);
 
       // 期限切れのキャッシュを作成
       const expiredCache: RSSCache = {
         content: TEST_CONTENT,
-        timestamp: Date.now() - 6 * 60 * 1000 // 6分前
+        timestamp: Date.now() - 6 * 60 * 1000, // 6分前
       };
       await kv.set(["rss", "expired-feed"], expiredCache);
 
       // 期限切れのURLリストを作成
       const expiredUrls: ValidURLList = {
         urls: ["https://example.com/expired"],
-        timestamp: Date.now() - 6 * 60 * 1000
+        timestamp: Date.now() - 6 * 60 * 1000,
       };
       await kv.set(["valid_urls", "expired-feed"], expiredUrls);
 
@@ -142,7 +152,7 @@ Deno.test({
       await cleanupTestData(kv);
       await kv.close();
     }
-  }
+  },
 });
 
 Deno.test({
@@ -151,5 +161,5 @@ Deno.test({
     const kv = await createTestKv();
     await cleanupTestData(kv);
     await kv.close();
-  }
+  },
 });

@@ -1,4 +1,4 @@
-import { RSSCache, ValidURLList, CacheStats, CacheError } from "./types.ts";
+import { CacheError, CacheStats, RSSCache, ValidURLList } from "./types.ts";
 import { CacheManager } from "./cache_manager.ts";
 
 export class RSSRepository {
@@ -6,8 +6,8 @@ export class RSSRepository {
 
   constructor(kv: Deno.Kv) {
     this.cacheManager = new CacheManager(kv, {
-      maxCacheSize: 50 * 1024 * 1024,  // 50MB
-      cleanupInterval: 30 * 60 * 1000   // 30分
+      maxCacheSize: 50 * 1024 * 1024, // 50MB
+      cleanupInterval: 30 * 60 * 1000, // 30分
     });
   }
 
@@ -19,7 +19,11 @@ export class RSSRepository {
       return await this.cacheManager.getCachedContent(feedUrl);
     } catch (error: unknown) {
       console.error("Error getting cached content:", error);
-      throw new CacheError(`Failed to get cached content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new CacheError(
+        `Failed to get cached content: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      );
     }
   }
 
@@ -31,7 +35,11 @@ export class RSSRepository {
       await this.cacheManager.cacheContent(feedUrl, content);
     } catch (error: unknown) {
       console.error("Error caching content:", error);
-      throw new CacheError(`Failed to cache content: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new CacheError(
+        `Failed to cache content: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      );
     }
   }
 
@@ -43,7 +51,11 @@ export class RSSRepository {
       await this.cacheManager.saveValidUrls(feedUrl, urls);
     } catch (error: unknown) {
       console.error("Error saving valid URLs:", error);
-      throw new CacheError(`Failed to save valid URLs: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new CacheError(
+        `Failed to save valid URLs: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      );
     }
   }
 
@@ -55,7 +67,11 @@ export class RSSRepository {
       return await this.cacheManager.isValidContentUrl(contentUrl);
     } catch (error: unknown) {
       console.error("Error checking valid content URL:", error);
-      throw new CacheError(`Failed to check valid content URL: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new CacheError(
+        `Failed to check valid content URL: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      );
     }
   }
 
@@ -69,7 +85,9 @@ export class RSSRepository {
       let oldestTimestamp = Date.now();
 
       // RSSキャッシュのエントリーをカウント
-      const rssEntries = this.cacheManager["kv"].list<RSSCache>({ prefix: ["rss"] });
+      const rssEntries = this.cacheManager["kv"].list<RSSCache>({
+        prefix: ["rss"],
+      });
       for await (const entry of rssEntries) {
         entryCount++;
         if (entry.value.timestamp < oldestTimestamp) {
@@ -78,7 +96,9 @@ export class RSSRepository {
       }
 
       // 有効なURLリストのエントリーをカウント
-      const urlEntries = this.cacheManager["kv"].list<ValidURLList>({ prefix: ["valid_urls"] });
+      const urlEntries = this.cacheManager["kv"].list<ValidURLList>({
+        prefix: ["valid_urls"],
+      });
       for await (const entry of urlEntries) {
         entryCount++;
         if (entry.value.timestamp < oldestTimestamp) {
@@ -99,11 +119,15 @@ export class RSSRepository {
         hitRate: metrics.hitRate,
         cleanupCount: metrics.cleanups,
         lastCleanupDuration: metrics.lastCleanupDuration,
-        memoryUsageRatio: totalSize / maxCacheSize
+        memoryUsageRatio: totalSize / maxCacheSize,
       };
     } catch (error: unknown) {
       console.error("Error getting cache stats:", error);
-      throw new CacheError(`Failed to get cache stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new CacheError(
+        `Failed to get cache stats: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      );
     }
   }
 
@@ -115,7 +139,11 @@ export class RSSRepository {
       await this.cacheManager["cleanup"]();
     } catch (error: unknown) {
       console.error("Error during cache cleanup:", error);
-      throw new CacheError(`Failed to cleanup cache: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new CacheError(
+        `Failed to cleanup cache: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      );
     }
   }
 }

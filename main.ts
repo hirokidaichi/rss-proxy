@@ -24,7 +24,10 @@ app.get("/rss/", async (c: Context) => {
 app.get("/content/", async (c: Context) => {
   const contentURL = c.req.query("contentURL");
   if (!contentURL) {
-    return ResponseHelper.createErrorResponse("Missing contentURL parameter", 400);
+    return ResponseHelper.createErrorResponse(
+      "Missing contentURL parameter",
+      400,
+    );
   }
   return await handleContent(contentURL, c.req.raw);
 });
@@ -36,12 +39,16 @@ app.onError((err: Error, _c: Context) => {
 });
 
 // 404ハンドリング
-app.notFound((_c: Context) => ResponseHelper.createErrorResponse("Not Found", 404));
+app.notFound((_c: Context) =>
+  ResponseHelper.createErrorResponse("Not Found", 404)
+);
 
 // サーバー起動時の情報表示
 console.log(`Server is running on http://localhost:${port}`);
 console.log("Available endpoints:");
 console.log("- GET /rss/?feedURL=<url>     : Fetch and transform RSS feed");
-console.log("- GET /content/?contentURL=<url>: Fetch content from allowed URLs");
+console.log(
+  "- GET /content/?contentURL=<url>: Fetch content from allowed URLs",
+);
 
 Deno.serve({ port }, app.fetch);

@@ -1,5 +1,5 @@
 import { parse } from "https://deno.land/x/xml@6.0.4/mod.ts";
-import { RSSDocument, ParseError, ValidationError } from "./types.ts";
+import { ParseError, RSSDocument, ValidationError } from "./types.ts";
 
 export class RSSParser {
   /**
@@ -11,8 +11,12 @@ export class RSSParser {
     }
 
     // XMLの基本的な形式チェック
-    if (!content.trim().startsWith("<?xml") && !content.trim().startsWith("<rss")) {
-      throw new ValidationError("Invalid XML format: Document must start with XML declaration or RSS tag");
+    if (
+      !content.trim().startsWith("<?xml") && !content.trim().startsWith("<rss")
+    ) {
+      throw new ValidationError(
+        "Invalid XML format: Document must start with XML declaration or RSS tag",
+      );
     }
 
     let doc: unknown;
@@ -20,12 +24,16 @@ export class RSSParser {
       doc = await Promise.resolve(parse(content));
       console.log("Parsed document:", JSON.stringify(doc, null, 2));
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      const errorMessage = error instanceof Error
+        ? error.message
+        : "Unknown error occurred";
       throw new ParseError(`Failed to parse XML: ${errorMessage}`);
     }
 
     if (!RSSParser.isValidRSSDocument(doc)) {
-      throw new ValidationError("Invalid RSS format: Document structure is invalid");
+      throw new ValidationError(
+        "Invalid RSS format: Document structure is invalid",
+      );
     }
 
     return RSSParser.normalizeDocument(doc as RSSDocument);
@@ -40,7 +48,7 @@ export class RSSParser {
     }
 
     const maybeRSS = doc as RSSDocument;
-    
+
     // rssプロパティの存在チェック
     if (!maybeRSS.rss || typeof maybeRSS.rss !== "object") {
       return false;
@@ -85,16 +93,16 @@ export class RSSParser {
 
     // アイテムを正規化
     if (Array.isArray(channel.item)) {
-      channel.item = channel.item.map(item => ({
+      channel.item = channel.item.map((item) => ({
         title: String(item.title ?? ""),
         link: String(item.link ?? ""),
-        description: String(item.description ?? "")
+        description: String(item.description ?? ""),
       }));
     } else if (channel.item) {
       channel.item = {
         title: String(channel.item.title ?? ""),
         link: String(channel.item.link ?? ""),
-        description: String(channel.item.description ?? "")
+        description: String(channel.item.description ?? ""),
       };
     }
 

@@ -12,9 +12,11 @@ async function runTests() {
   try {
     // 正常系テスト
     console.log(`Fetching RSS from: ${TEST_FEED_URL}`);
-    const rssResponse = await fetch(`${SERVER_URL}/rss/?feedURL=${encodeURIComponent(TEST_FEED_URL)}`);
+    const rssResponse = await fetch(
+      `${SERVER_URL}/rss/?feedURL=${encodeURIComponent(TEST_FEED_URL)}`,
+    );
     console.log(`RSS Test - Status: ${rssResponse.status}`);
-    
+
     if (rssResponse.ok) {
       const content = await rssResponse.text();
       console.log("\nRSS Response Headers:");
@@ -35,22 +37,28 @@ async function runTests() {
         const firstItem = Array.isArray(items) ? items[0] : items;
         console.log("\nFirst Item Details:");
         console.log("Title:", firstItem.title);
-        
+
         // 変換前のURLを抽出（変換されたURLから元のURLを取得）
         const transformedLink = firstItem.link;
-        const originalUrl = transformedLink ? 
-          decodeURIComponent(new URL(transformedLink).searchParams.get("contentURL") || "") :
-          "";
-        
+        const originalUrl = transformedLink
+          ? decodeURIComponent(
+            new URL(transformedLink).searchParams.get("contentURL") || "",
+          )
+          : "";
+
         console.log("Original Link:", originalUrl);
         console.log("Transformed Link:", transformedLink);
-        
+
         // 元のURLを使用してcontentエンドポイントをテスト
         if (originalUrl) {
           console.log("\nTesting /content/ endpoint with the original URL:");
-          const contentResponse = await fetch(`${SERVER_URL}/content/?contentURL=${encodeURIComponent(originalUrl)}`);
+          const contentResponse = await fetch(
+            `${SERVER_URL}/content/?contentURL=${
+              encodeURIComponent(originalUrl)
+            }`,
+          );
           console.log(`Content Test - Status: ${contentResponse.status}`);
-          
+
           if (contentResponse.ok) {
             const content = await contentResponse.text();
             console.log("\nContent Response Headers:");
@@ -70,10 +78,13 @@ async function runTests() {
 
     // エラー系テスト（不正なURL）
     console.log("\nTesting with invalid URL:");
-    const invalidRssResponse = await fetch(`${SERVER_URL}/rss/?feedURL=invalid-url`);
-    console.log(`RSS Test (Invalid URL) - Status: ${invalidRssResponse.status}`);
+    const invalidRssResponse = await fetch(
+      `${SERVER_URL}/rss/?feedURL=invalid-url`,
+    );
+    console.log(
+      `RSS Test (Invalid URL) - Status: ${invalidRssResponse.status}`,
+    );
     console.log("Error Response:", await invalidRssResponse.text());
-
   } catch (error) {
     console.error("Error during tests:", error);
   }

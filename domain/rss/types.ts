@@ -24,7 +24,7 @@ export interface RSSDocument {
 export interface RSSCache {
   content: string;
   timestamp: number;
-  size?: number;  // コンテンツのサイズ（バイト）
+  size?: number; // コンテンツのサイズ（バイト）
   lastAccessed?: number; // 最後にアクセスされた時刻
 }
 
@@ -34,15 +34,15 @@ export interface ValidURLList {
 }
 
 export interface CacheStats {
-  totalSize: number;      // 全キャッシュの合計サイズ（バイト）
-  entryCount: number;     // キャッシュエントリー数
-  oldestTimestamp: number;// 最も古いエントリーのタイムスタンプ
-  hitCount: number;       // キャッシュヒット数
-  missCount: number;      // キャッシュミス数
-  hitRate: number;        // キャッシュヒット率
-  cleanupCount: number;   // クリーンアップ実行回数
+  totalSize: number; // 全キャッシュの合計サイズ（バイト）
+  entryCount: number; // キャッシュエントリー数
+  oldestTimestamp: number; // 最も古いエントリーのタイムスタンプ
+  hitCount: number; // キャッシュヒット数
+  missCount: number; // キャッシュミス数
+  hitRate: number; // キャッシュヒット率
+  cleanupCount: number; // クリーンアップ実行回数
   lastCleanupDuration: number; // 最後のクリーンアップ所要時間（ミリ秒）
-  memoryUsageRatio: number;    // メモリ使用率
+  memoryUsageRatio: number; // メモリ使用率
 }
 
 export interface CacheMetrics {

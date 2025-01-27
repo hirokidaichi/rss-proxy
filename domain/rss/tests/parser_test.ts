@@ -1,6 +1,9 @@
-import { assertEquals, assertRejects } from "https://deno.land/std@0.224.0/testing/asserts.ts";
+import {
+  assertEquals,
+  assertRejects,
+} from "https://deno.land/std@0.224.0/testing/asserts.ts";
 import { RSSParser } from "../parser.ts";
-import { ParseError, ValidationError } from "../types.ts";
+import { ValidationError } from "../types.ts";
 
 const VALID_RSS = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
@@ -54,7 +57,10 @@ Deno.test("RSSParser - Valid RSS", async () => {
   if (Array.isArray(doc.rss?.channel?.item)) {
     assertEquals(doc.rss?.channel?.item.length, 2);
     assertEquals(doc.rss?.channel?.item[0].title, "Test Item 1");
-    assertEquals(doc.rss?.channel?.item[0].link, "https://example.com/article1");
+    assertEquals(
+      doc.rss?.channel?.item[0].link,
+      "https://example.com/article1",
+    );
   }
 });
 
@@ -62,7 +68,7 @@ Deno.test("RSSParser - Empty Content", async () => {
   await assertRejects(
     async () => await RSSParser.parse(""),
     ValidationError,
-    "Empty content"
+    "Empty content",
   );
 });
 
@@ -70,7 +76,7 @@ Deno.test("RSSParser - Invalid XML", async () => {
   await assertRejects(
     async () => await RSSParser.parse(INVALID_XML),
     ValidationError,
-    "Invalid XML format"
+    "Invalid XML format",
   );
 });
 
@@ -78,7 +84,7 @@ Deno.test("RSSParser - Invalid RSS Structure", async () => {
   await assertRejects(
     async () => await RSSParser.parse(INVALID_RSS),
     ValidationError,
-    "Invalid RSS format"
+    "Invalid RSS format",
   );
 });
 
@@ -86,7 +92,7 @@ Deno.test("RSSParser - RSS Without Channel", async () => {
   await assertRejects(
     async () => await RSSParser.parse(RSS_WITHOUT_CHANNEL),
     ValidationError,
-    "Invalid RSS format"
+    "Invalid RSS format",
   );
 });
 
